@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Glycol bath probe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,520;9..144,640&family=Outfit:wght@380;500;640&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper: #efe6d4;
+      --ink: #1c1814;
+      --muted: #5e564c;
+      --card: #f7f1e6;
+      --line: #ddd2bc;
+      --teal: #0c5c56;
+      --teal-deep: #084440;
+      --brass: #8a6230;
+      --alert: #8d342c;
+      --ok: #1d6b45;
+      --shadow: 0 18px 40px rgba(58, 42, 18, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #f6edd9 0%, transparent 55%),
+        linear-gradient(180deg, #f3eadb 0%, var(--paper) 40%, #e7dcc6 100%);
+      font-family: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+      font-weight: 380;
+    }
+
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-end;
+      margin-bottom: 22px;
+    }
+
+    .kicker {
+      margin: 0 0 6px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      color: var(--brass);
+      font-weight: 640;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Fraunces", Georgia, serif;
+      font-weight: 560;
+      font-size: clamp(2.4rem, 5vw, 4.2rem);
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+
+    .deck {
+      max-width: 38rem;
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.45;
+    }
+
+    .readout {
+      text-align: right;
+      min-width: 11rem;
+    }
+
+    .readout strong {
+      display: block;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: clamp(3rem, 6vw, 4.4rem);
+      font-weight: 640;
+      letter-spacing: -0.04em;
+      line-height: 0.9;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #unit-label {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding: 4px 10px 4px 8px;
+      border-radius: 999px;
+      background: #fffaf1;
+      border: 1px solid var(--line);
+      font-size: 0.86rem;
+      font-weight: 500;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .status.steady .dot { background: var(--ok); }
+    .status.low .dot, .status.high .dot { background: var(--alert); }
+    .status.paused .dot { background: var(--brass); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .chart-wrap {
+      position: relative;
+      min-height: 280px;
+      background: #fff;
+    }
+
+    .chart-wrap img {
+      display: block;
+      width: 100%;
+      height: auto;
+      opacity: 1;
+      transition: opacity 160ms ease;
+    }
+
+    .chart-wrap.is-loading img { opacity: 0.55; }
+
+    .banner {
+      display: none;
+      margin: 0;
+      padding: 10px 16px;
+      background: #f6e2dc;
+      color: var(--alert);
+      font-weight: 500;
+    }
+
+    .banner.show { display: block; }
+
+    .toolbar, .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+    }
+
+    .stats {
+      border-top: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px 16px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      font-variant-numeric: tabular-nums;
+      font-weight: 640;
+      font-size: 1.15rem;
+    }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    button {
+      appearance: none;
+      border: 1px solid transparent;
+      background: var(--teal);
+      color: #f6f3ea;
+      font: inherit;
+      font-weight: 500;
+      padding: 10px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    button:hover { background: var(--teal-deep); }
+
+    button.secondary {
+      background: transparent;
+      color: var(--ink);
+      border-color: #cbbfa8;
+    }
+
+    button.secondary:hover { background: #efe6d4; }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .note {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    footer a { color: var(--teal-deep); }
+
+    @media (max-width: 720px) {
+      header { flex-direction: column; align-items: flex-start; }
+      .readout { text-align: left; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .toolbar { align-items: stretch; }
+      .actions, button { width: 100%; }
+      .actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="kicker" id="room">Cold room 2</p>
+        <h1 id="title">Glycol bath</h1>
+        <p class="deck" id="deck">
+          Probe A sits in the bath and reports once a second. The line should stay inside the shaded band around 4°C. Start logging to watch it wander.
+        </p>
+      </div>
+      <div class="readout">
+        <strong id="latest" aria-live="polite">—</strong>
+        <span id="unit-label">°C</span>
+        <div class="status idle" id="status"><i class="dot"></i><span id="status-label">Not logging</span></div>
+      </div>
+    </header>
+
+    <section class="card">
+      <p class="banner" id="banner" role="alert"></p>
+      <div class="chart-wrap is-loading" id="chart-wrap">
+        <img id="chart" alt="Temperature versus seconds for the glycol bath probe" />
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Mean</span><strong id="mean">—</strong></div>
+        <div class="stat"><span>Min</span><strong id="minimum">—</strong></div>
+        <div class="stat"><span>Max</span><strong id="maximum">—</strong></div>
+        <div class="stat"><span>Samples</span><strong id="count">0</strong></div>
+      </div>
+      <div class="toolbar">
+        <p class="note" id="note">Logging is stopped.</p>
+        <div class="actions">
+          <button type="button" id="start">Start logging</button>
+          <button type="button" class="secondary" id="pause" disabled>Pause</button>
+          <button type="button" class="secondary" id="clear">Clear trace</button>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      The figure is drawn with
+      <a id="library-link" href="https://github.com/tjws052009/matplotlib_test">matplotlib_test</a>
+      <span id="library-version"></span>.
+    </footer>
+  </main>
+  <script>
+    const statusCopy = {
+      idle: "Not logging",
+      steady: "Inside band",
+      low: "Below band",
+      high: "Above band",
+      paused: "Paused",
+    };
+
+    const els = {
+      room: document.querySelector("#room"),
+      title: document.querySelector("#title"),
+      latest: document.querySelector("#latest"),
+      status: document.querySelector("#status"),
+      statusLabel: document.querySelector("#status-label"),
+      mean: document.querySelector("#mean"),
+      minimum: document.querySelector("#minimum"),
+      maximum: document.querySelector("#maximum"),
+      count: document.querySelector("#count"),
+      note: document.querySelector("#note"),
+      banner: document.querySelector("#banner"),
+      chart: document.querySelector("#chart"),
+      chartWrap: document.querySelector("#chart-wrap"),
+      start: document.querySelector("#start"),
+      pause: document.querySelector("#pause"),
+      clear: document.querySelector("#clear"),
+      version: document.querySelector("#library-version"),
+      libraryLink: document.querySelector("#library-link"),
+    };
+
+    let logging = false;
+    let loopToken = 0;
+    let chartToken = 0;
+
+    function formatReading(value, unit) {
+      if (value === null || value === undefined) return "—";
+      return `${Number(value).toFixed(2)} ${unit}`;
+    }
+
+    function showError(message) {
+      els.banner.textContent = message;
+      els.banner.classList.add("show");
+    }
+
+    function clearError() {
+      els.banner.textContent = "";
+      els.banner.classList.remove("show");
+    }
+
+    function paint(snapshot) {
+      const unit = snapshot.unit;
+      els.room.textContent = snapshot.room;
+      els.title.textContent = snapshot.name;
+      els.latest.textContent = snapshot.latest === null ? "—" : Number(snapshot.latest).toFixed(2);
+      els.status.className = `status ${snapshot.status}`;
+      els.statusLabel.textContent = statusCopy[snapshot.status] || snapshot.status;
+      els.mean.textContent = formatReading(snapshot.mean, unit);
+      els.minimum.textContent = formatReading(snapshot.minimum, unit);
+      els.maximum.textContent = formatReading(snapshot.maximum, unit);
+      els.count.textContent = String(snapshot.count);
+      logging = Boolean(snapshot.running);
+      els.pause.disabled = !logging;
+      els.pause.textContent = logging ? "Pause" : "Pause";
+      els.start.disabled = logging;
+      els.start.textContent = snapshot.count && !logging ? "Resume" : "Start logging";
+      if (snapshot.count === 0) {
+        els.note.textContent = "Logging is stopped. The chart is waiting for the first sample.";
+      } else if (logging) {
+        els.note.textContent = `${snapshot.channel} is logging. Each point is one second.`;
+      } else {
+        els.note.textContent = "Paused. The last trace stays on the chart until you clear it.";
+      }
+      if (snapshot.library) {
+        els.libraryLink.href = snapshot.library.source;
+        const version = (snapshot.library.version || "").split("+")[0];
+        els.version.textContent = version ? ` ${version}` : "";
+      }
+      const latestAlt = snapshot.latest === null
+        ? "Empty temperature chart, no samples yet"
+        : `Temperature chart, latest reading ${Number(snapshot.latest).toFixed(2)} degrees`;
+      els.chart.alt = latestAlt;
+    }
+
+    function loadChart() {
+      const token = ++chartToken;
+      const img = new Image();
+      els.chartWrap.classList.add("is-loading");
+      img.onload = () => {
+        if (token !== chartToken) return;
+        els.chart.src = img.src;
+        els.chartWrap.classList.remove("is-loading");
+        clearError();
+      };
+      img.onerror = () => {
+        if (token !== chartToken) return;
+        els.chartWrap.classList.remove("is-loading");
+        showError("The chart could not be drawn. Try clearing the trace.");
+      };
+      img.src = `/plot.svg?t=${Date.now()}`;
+    }
+
+    async function post(path) {
+      const response = await fetch(path, { method: "POST" });
+      if (!response.ok) throw new Error(`Request failed (${response.status})`);
+      return response.json();
+    }
+
+    async function loop(token) {
+      while (logging && token === loopToken) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (!logging || token !== loopToken) return;
+        try {
+          const snapshot = await post("/api/tick");
+          if (token !== loopToken) return;
+          paint(snapshot);
+          loadChart();
+          clearError();
+        } catch (error) {
+          showError("Lost the probe for a moment. The next sample will retry.");
+        }
+      }
+    }
+
+    async function begin(path) {
+      els.start.disabled = true;
+      try {
+        const snapshot = await post(path);
+        paint(snapshot);
+        loadChart();
+        loopToken += 1;
+        loop(loopToken);
+        clearError();
+      } catch (error) {
+        els.start.disabled = false;
+        showError("Could not start logging.");
+      }
+    }
+
+    els.start.addEventListener("click", () => {
+      const path = els.start.textContent === "Resume" ? "/api/resume" : "/api/start";
+      begin(path);
+    });
+
+    els.pause.addEventListener("click", async () => {
+      logging = false;
+      loopToken += 1;
+      els.pause.disabled = true;
+      try {
+        const snapshot = await post("/api/pause");
+        paint(snapshot);
+        clearError();
+      } catch (error) {
+        els.start.disabled = false;
+        els.start.textContent = "Resume";
+        showError("Could not pause the probe.");
+      }
+    });
+
+    els.clear.addEventListener("click", async () => {
+      logging = false;
+      loopToken += 1;
+      try {
+        const snapshot = await post("/api/reset");
+        paint(snapshot);
+        loadChart();
+        clearError();
+      } catch (error) {
+        showError("Could not clear the trace.");
+      }
+    });
+
+    async function boot() {
+      try {
+        const snapshot = await fetch("/api/trace").then((response) => {
+          if (!response.ok) throw new Error("status");
+          return response.json();
+        });
+        paint(snapshot);
+        loadChart();
+        if (snapshot.running) {
+          loopToken += 1;
+          loop(loopToken);
+        }
+      } catch (error) {
+        els.chartWrap.classList.remove("is-loading");
+        showError("The probe service did not answer.");
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>
