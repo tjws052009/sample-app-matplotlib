@@ -1,4 +1,4 @@
-"""Draw the probe trace as an SVG figure."""
+"""Draw cumulative sales as an SVG line."""
 
 from __future__ import annotations
 
@@ -14,86 +14,68 @@ matplotlib.rcParams["svg.fonttype"] = "path"
 
 from matplotlib.backends.backend_svg import FigureCanvasSVG
 from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
+from matplotlib.ticker import FuncFormatter
 
 _lock = threading.Lock()
 
 
+def _dollars(value: float, _position: int) -> str:
+    return f"${value:,.0f}"
+
+
 def render_svg(snapshot: dict[str, Any]) -> str:
-    """Return a responsive SVG of temperature against elapsed seconds."""
+    """Return a responsive SVG of total sales against day number."""
     with _lock:
         fig = Figure(figsize=(9.4, 4.5), dpi=120)
         FigureCanvasSVG(fig)
         ax = fig.add_subplot(111)
 
-        low, high = snapshot["band"]
         points = snapshot["points"]
-        unit = snapshot["unit"]
-        reading_color = matplotlib.rcParams["axes.prop_cycle"].by_key()["color"][0]
-
-        band = ax.axhspan(low, high, alpha=0.15, zorder=0, linewidth=0)
-        setpoint = ax.axhline(
-            snapshot["setpoint"],
-            linestyle="--",
-            zorder=1,
-        )
-
-        line = None
         if points:
-            times = [point["t"] for point in points]
-            values = [point["y"] for point in points]
-            (line,) = ax.plot(times, values, zorder=2)
+            days = [point["t"] for point in points]
+            totals = [point["y"] for point in points]
+            (line,) = ax.plot(days, totals, zorder=2)
             ax.scatter(
-                [times[-1]],
-                [values[-1]],
+                [days[-1]],
+                [totals[-1]],
                 s=32,
                 color=line.get_color(),
                 zorder=3,
                 linewidths=0,
             )
-            span = max(times[-1] - times[0], 1)
-            pad = max(1.0, span * 0.02)
-            ax.set_xlim(times[0] - pad * 0.15, times[-1] + pad)
-            stacked = values + [low, high]
-            y_pad = 0.55
-            ax.set_ylim(min(stacked) - y_pad, max(stacked) + y_pad)
+            span = max(days[-1] - days[0], 1)
+            pad = max(0.4, span * 0.02)
+            ax.set_xlim(days[0] - pad * 0.15, days[-1] + pad)
+            top = max(totals) * 1.08
+            if days[0] == 1:
+                ax.set_ylim(0, top)
+            else:
+                floor = min(totals) * 0.97
+                ax.set_ylim(floor, max(top, floor + 1))
+            ax.legend(
+                [line],
+                ["Total sales"],
+                frameon=False,
+                loc="upper left",
+            )
         else:
-            ax.set_xlim(0, 60)
-            ax.set_ylim(low - 1.4, high + 1.4)
+            ax.set_xlim(0, 30)
+            ax.set_ylim(0, 5000)
             ax.text(
                 0.5,
                 0.58,
-                "No samples yet",
+                "No sales yet",
                 transform=ax.transAxes,
                 ha="center",
                 va="center",
             )
 
-        ax.set_xlabel("Seconds on the probe clock")
-        ax.set_ylabel(f"Temperature ({unit})")
+        ax.set_xlabel("Day")
+        ax.set_ylabel("Total sales ($)")
+        ax.yaxis.set_major_formatter(FuncFormatter(_dollars))
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.grid(True, axis="y", zorder=0)
-        reading = line or Line2D([0], [0], color=reading_color, label="Reading")
-        ax.legend(
-            handles=[
-                reading,
-                setpoint,
-                Patch(
-                    facecolor=band.get_facecolor(),
-                    edgecolor="none",
-                    label="Acceptable band",
-                ),
-            ],
-            labels=[
-                "Reading",
-                f"Setpoint {snapshot['setpoint']:g}{unit}",
-                "Acceptable band",
-            ],
-            frameon=False,
-            loc="upper left",
-        )
         fig.tight_layout(pad=0.7)
 
         buffer = StringIO()

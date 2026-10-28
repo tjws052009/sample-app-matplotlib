@@ -1,8 +1,8 @@
-# Sensor trace
+# Total sales
 
-A small web app that plots a simulated cold-room probe on an XY chart. Time runs along the horizontal axis and temperature along the vertical axis. The figure is drawn with [Matplotlib](https://github.com/tjws052009/matplotlib_test), installed from that repository.
+A small web app that plots a store's running sales total on an XY chart. Days run along the horizontal axis and the cumulative takings run along the vertical axis. The figure is drawn with [Matplotlib](https://github.com/tjws052009/matplotlib_test), installed from that repository.
 
-The probe is a glycol bath held near 4°C. Readings wander around the setpoint with a little noise, and the chart keeps the last three minutes.
+Each point adds one simulated day from the front counter. The line starts at the first day's sales and only climbs.
 
 ## Run
 
@@ -10,12 +10,12 @@ The first install compiles Matplotlib, so you need Python 3.12 or newer, a C++ c
 
 ```bash
 uv sync --extra dev
-uv run sensor-trace
+uv run sales-chart
 ```
 
 Then open [http://127.0.0.1:8742](http://127.0.0.1:8742).
 
-Start logging to draw the trace. Pause keeps the samples on the chart. Clear drops them.
+Start recording to draw the total. Pause keeps the line on the chart. Clear drops it.
 
 ## Tests
 

@@ -1,7 +1,7 @@
 [project]
 name = "sensor-trace"
 version = "0.1.0"
-description = "Live XY chart of a simulated cold-room probe, drawn with Matplotlib."
+description = "Cumulative store sales, drawn as a line with Matplotlib."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -18,7 +18,7 @@ dev = [
 ]
 
 [project.scripts]
-sensor-trace = "app.main:main"
+sales-chart = "app.main:main"
 
 [build-system]
 requires = ["setuptools>=68"]

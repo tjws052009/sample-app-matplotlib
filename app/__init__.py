@@ -1,1 +1,1 @@
-"""Cold-room probe chart, plotted with Matplotlib."""
+"""Cumulative store sales, plotted with Matplotlib."""
