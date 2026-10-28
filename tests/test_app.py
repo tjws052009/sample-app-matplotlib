@@ -1,14 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app, trace
+from app.main import app, ledger
 
 
 @pytest.fixture(autouse=True)
-def clean_probe():
-    trace.reset()
+def clean_ledger():
+    ledger.reset()
     yield
-    trace.reset()
+    ledger.reset()
 
 
 @pytest.fixture
@@ -16,11 +16,11 @@ def client():
     return TestClient(app)
 
 
-def test_page_describes_the_probe(client):
+def test_page_describes_total_sales(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert "Glycol bath" in response.text
-    assert "Start logging" in response.text
+    assert "Total sales" in response.text
+    assert "Start recording" in response.text
 
 
 def test_plot_endpoint_returns_svg(client):
@@ -31,12 +31,13 @@ def test_plot_endpoint_returns_svg(client):
     assert b'width="100%"' in response.content
 
 
-def test_logging_pause_and_clear(client):
+def test_recording_pause_and_clear(client):
     started = client.post("/api/start")
     assert started.status_code == 200
     body = started.json()
     assert body["count"] == 12
     assert body["running"] is True
+    assert body["latest"] > body["points"][0]["y"]
     assert body["library"]["source"].endswith("matplotlib_test")
     assert body["library"]["version"]
 
@@ -48,15 +49,17 @@ def test_logging_pause_and_clear(client):
     assert resumed["running"] is True
     assert resumed["count"] == 12
 
+    before = resumed["latest"]
     ticked = client.post("/api/tick").json()
     assert ticked["count"] == 13
+    assert ticked["latest"] > before
 
     cleared = client.post("/api/reset").json()
     assert cleared["count"] == 0
     assert cleared["status"] == "idle"
 
 
-def test_tick_while_idle_does_not_invent_samples(client):
+def test_tick_while_idle_does_not_invent_sales(client):
     body = client.post("/api/tick").json()
     assert body["count"] == 0
     assert body["status"] == "idle"
