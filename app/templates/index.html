@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Glycol bath probe</title>
+  <title>Total sales</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,520;9..144,640&family=Outfit:wght@380;500;640&display=swap" rel="stylesheet" />
@@ -117,7 +117,7 @@
       background: var(--muted);
     }
 
-    .status.steady .dot { background: var(--ok); }
+    .status.recording .dot { background: var(--ok); }
     .status.low .dot, .status.high .dot { background: var(--alert); }
     .status.paused .dot { background: var(--brass); }
 
@@ -168,7 +168,7 @@
     .stats {
       border-top: 1px solid var(--line);
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 8px 16px;
     }
 
@@ -243,36 +243,35 @@
   <main>
     <header>
       <div>
-        <p class="kicker" id="room">Cold room 2</p>
-        <h1 id="title">Glycol bath</h1>
+        <p class="kicker" id="store">Store 4</p>
+        <h1 id="title">Total sales</h1>
         <p class="deck" id="deck">
-          Probe A sits in the bath and reports once a second. The line should stay inside the shaded band around 4°C. Start logging to watch it wander.
+          The front counter adds each day's takings to a running total. The line starts at the first day and only climbs.
         </p>
       </div>
       <div class="readout">
         <strong id="latest" aria-live="polite">—</strong>
-        <span id="unit-label">°C</span>
-        <div class="status idle" id="status"><i class="dot"></i><span id="status-label">Not logging</span></div>
+        <span id="unit-label">USD</span>
+        <div class="status idle" id="status"><i class="dot"></i><span id="status-label">Not recording</span></div>
       </div>
     </header>
 
     <section class="card">
       <p class="banner" id="banner" role="alert"></p>
       <div class="chart-wrap is-loading" id="chart-wrap">
-        <img id="chart" alt="Temperature versus seconds for the glycol bath probe" />
+        <img id="chart" alt="Cumulative sales versus day" />
       </div>
       <div class="stats">
-        <div class="stat"><span>Mean</span><strong id="mean">—</strong></div>
-        <div class="stat"><span>Min</span><strong id="minimum">—</strong></div>
-        <div class="stat"><span>Max</span><strong id="maximum">—</strong></div>
-        <div class="stat"><span>Samples</span><strong id="count">0</strong></div>
+        <div class="stat"><span>Today</span><strong id="today">—</strong></div>
+        <div class="stat"><span>Daily average</span><strong id="average">—</strong></div>
+        <div class="stat"><span>Days</span><strong id="count">0</strong></div>
       </div>
       <div class="toolbar">
-        <p class="note" id="note">Logging is stopped.</p>
+        <p class="note" id="note">Recording is stopped.</p>
         <div class="actions">
-          <button type="button" id="start">Start logging</button>
+          <button type="button" id="start">Start recording</button>
           <button type="button" class="secondary" id="pause" disabled>Pause</button>
-          <button type="button" class="secondary" id="clear">Clear trace</button>
+          <button type="button" class="secondary" id="clear">Clear</button>
         </div>
       </div>
     </section>
@@ -285,22 +284,25 @@
   </main>
   <script>
     const statusCopy = {
-      idle: "Not logging",
-      steady: "Inside band",
-      low: "Below band",
-      high: "Above band",
+      idle: "Not recording",
+      recording: "Adding days",
       paused: "Paused",
     };
 
+    const money = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    });
+
     const els = {
-      room: document.querySelector("#room"),
+      store: document.querySelector("#store"),
       title: document.querySelector("#title"),
       latest: document.querySelector("#latest"),
       status: document.querySelector("#status"),
       statusLabel: document.querySelector("#status-label"),
-      mean: document.querySelector("#mean"),
-      minimum: document.querySelector("#minimum"),
-      maximum: document.querySelector("#maximum"),
+      today: document.querySelector("#today"),
+      average: document.querySelector("#average"),
       count: document.querySelector("#count"),
       note: document.querySelector("#note"),
       banner: document.querySelector("#banner"),
@@ -317,9 +319,9 @@
     let loopToken = 0;
     let chartToken = 0;
 
-    function formatReading(value, unit) {
+    function formatMoney(value) {
       if (value === null || value === undefined) return "—";
-      return `${Number(value).toFixed(2)} ${unit}`;
+      return money.format(value);
     }
 
     function showError(message) {
@@ -333,37 +335,33 @@
     }
 
     function paint(snapshot) {
-      const unit = snapshot.unit;
-      els.room.textContent = snapshot.room;
+      els.store.textContent = snapshot.store;
       els.title.textContent = snapshot.name;
-      els.latest.textContent = snapshot.latest === null ? "—" : Number(snapshot.latest).toFixed(2);
+      els.latest.textContent = snapshot.latest === null ? "—" : money.format(snapshot.latest);
       els.status.className = `status ${snapshot.status}`;
       els.statusLabel.textContent = statusCopy[snapshot.status] || snapshot.status;
-      els.mean.textContent = formatReading(snapshot.mean, unit);
-      els.minimum.textContent = formatReading(snapshot.minimum, unit);
-      els.maximum.textContent = formatReading(snapshot.maximum, unit);
+      els.today.textContent = formatMoney(snapshot.today);
+      els.average.textContent = formatMoney(snapshot.average);
       els.count.textContent = String(snapshot.count);
       logging = Boolean(snapshot.running);
       els.pause.disabled = !logging;
-      els.pause.textContent = logging ? "Pause" : "Pause";
       els.start.disabled = logging;
-      els.start.textContent = snapshot.count && !logging ? "Resume" : "Start logging";
+      els.start.textContent = snapshot.count && !logging ? "Resume" : "Start recording";
       if (snapshot.count === 0) {
-        els.note.textContent = "Logging is stopped. The chart is waiting for the first sample.";
+        els.note.textContent = "Recording is stopped. The chart is waiting for the first day.";
       } else if (logging) {
-        els.note.textContent = `${snapshot.channel} is logging. Each point is one second.`;
+        els.note.textContent = `${snapshot.counter} is open. Each point adds one day to the total.`;
       } else {
-        els.note.textContent = "Paused. The last trace stays on the chart until you clear it.";
+        els.note.textContent = "Paused. The running total stays on the chart until you clear it.";
       }
       if (snapshot.library) {
         els.libraryLink.href = snapshot.library.source;
         const version = (snapshot.library.version || "").split("+")[0];
         els.version.textContent = version ? ` ${version}` : "";
       }
-      const latestAlt = snapshot.latest === null
-        ? "Empty temperature chart, no samples yet"
-        : `Temperature chart, latest reading ${Number(snapshot.latest).toFixed(2)} degrees`;
-      els.chart.alt = latestAlt;
+      els.chart.alt = snapshot.latest === null
+        ? "Empty sales chart, no days yet"
+        : `Cumulative sales chart, total ${money.format(snapshot.latest)}`;
     }
 
     function loadChart() {
@@ -379,7 +377,7 @@
       img.onerror = () => {
         if (token !== chartToken) return;
         els.chartWrap.classList.remove("is-loading");
-        showError("The chart could not be drawn. Try clearing the trace.");
+        showError("The chart could not be drawn. Try clearing the ledger.");
       };
       img.src = `/plot.svg?t=${Date.now()}`;
     }
@@ -401,7 +399,7 @@
           loadChart();
           clearError();
         } catch (error) {
-          showError("Lost the probe for a moment. The next sample will retry.");
+          showError("Lost the counter for a moment. The next day will retry.");
         }
       }
     }
@@ -417,7 +415,7 @@
         clearError();
       } catch (error) {
         els.start.disabled = false;
-        showError("Could not start logging.");
+        showError("Could not start recording.");
       }
     }
 
@@ -437,7 +435,7 @@
       } catch (error) {
         els.start.disabled = false;
         els.start.textContent = "Resume";
-        showError("Could not pause the probe.");
+        showError("Could not pause recording.");
       }
     });
 
@@ -450,7 +448,7 @@
         loadChart();
         clearError();
       } catch (error) {
-        showError("Could not clear the trace.");
+        showError("Could not clear the ledger.");
       }
     });
 
@@ -468,7 +466,7 @@
         }
       } catch (error) {
         els.chartWrap.classList.remove("is-loading");
-        showError("The probe service did not answer.");
+        showError("The sales service did not answer.");
       }
     }
 
